@@ -22,6 +22,7 @@ COPY bdc_utils.py \
      fetch_studies.py \
      update_programs.py \
      deploy_mappings.py \
+     diff_runs.py \
      run_pipeline.sh \
      ./
 

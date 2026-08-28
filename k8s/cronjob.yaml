@@ -42,6 +42,16 @@ spec:
                     secretKeyRef:
                       name: program-table-secrets
                       key: JIRA_TOKEN
+                - name: LAKEFS_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: dug-ingest-secrets
+                      key: lakefs-username
+                - name: LAKEFS_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: dug-ingest-secrets
+                      key: lakefs-password
                 - name: JIRA_URL
                   value: "https://nhlbijira.nhlbi.nih.gov"
                 - name: BDC_URL
@@ -50,12 +60,27 @@ spec:
                   value: "https://gen3.biodatacatalyst.nhlbi.nih.gov/"
                 - name: DEPLOY_NAMESPACE
                   value: "bdc-search-dev"
+                - name: LAKEFS_HOST
+                  value: "https://lakefs.apps.renci.org"
+                - name: LAKEFS_REPO
+                  value: "bdc-program-table"
+                - name: LAKEFS_BRANCH
+                  value: "main"
 
-              # Run pipeline steps 0-2, then patch ConfigMap + restart search-api
+              # Run pipeline steps 0-2, patch ConfigMap, restart search-api, upload to lakeFS
               command: ["bash", "-c"]
               args:
                 - |
                   set -e
+
+                  RUN_DATE=$(date '+%Y_%m_%d')
+                  SUMMARY=/tmp/run_summary.txt
+                  # Tee all output to summary file
+                  exec > >(tee -a "$SUMMARY") 2>&1
+
+                  echo "=== BDC Program Table Pipeline ==="
+                  echo "Run date: $(date '+%Y-%m-%d %H:%M:%S UTC')"
+                  echo ""
 
                   echo "=== Starting program table pipeline ==="
                   bash run_pipeline.sh -o /data --skip-deploy
@@ -69,6 +94,17 @@ spec:
                     exit 1
                   fi
                   echo "Using: $YAML"
+
+                  echo ""
+                  echo "=== Comparing with previous run ==="
+                  PREV_YAML=$(ls -t /data/*/program_table/program_table_updated_*.yaml 2>/dev/null \
+                              | grep -v minified | grep -v "$YAML" | head -1)
+                  if [[ -n "$PREV_YAML" ]]; then
+                    echo "Previous: $PREV_YAML"
+                    python3 /app/diff_runs.py "$PREV_YAML" "$YAML"
+                  else
+                    echo "No previous run found — this appears to be the first run"
+                  fi
 
                   echo ""
                   echo "=== Converting YAML to JSON for ConfigMap ==="
@@ -101,7 +137,33 @@ spec:
                     python3 -c "import sys,json; d=json.load(sys.stdin); print(f'ConfigMap entries: {len(d)}')"
 
                   echo ""
-                  echo "=== Pipeline complete ==="
+                  echo "=== Pipeline complete at $(date '+%Y-%m-%d %H:%M:%S UTC') ==="
+
+                  echo ""
+                  echo "=== Uploading to lakeFS ($LAKEFS_REPO/$LAKEFS_BRANCH/$RUN_DATE/) ==="
+                  LAKEFS_AUTH="$LAKEFS_USERNAME:$LAKEFS_PASSWORD"
+                  LAKEFS_API="$LAKEFS_HOST/api/v1/repositories/$LAKEFS_REPO/branches/$LAKEFS_BRANCH/objects"
+
+                  # Upload program table YAML
+                  YAML_FILENAME=$(basename "$YAML")
+                  curl -sf -u "$LAKEFS_AUTH" -X POST \
+                    "$LAKEFS_API?path=$RUN_DATE/$YAML_FILENAME" \
+                    -F "content=@$YAML"
+                  echo "Uploaded: $RUN_DATE/$YAML_FILENAME"
+
+                  # Upload run summary (flush tee buffer first)
+                  echo "Run uploaded at $(date '+%Y-%m-%d %H:%M:%S UTC')" >> "$SUMMARY"
+                  curl -sf -u "$LAKEFS_AUTH" -X POST \
+                    "$LAKEFS_API?path=$RUN_DATE/run_summary.txt" \
+                    -F "content=@$SUMMARY"
+                  echo "Uploaded: $RUN_DATE/run_summary.txt"
+
+                  # Commit the lakeFS objects
+                  curl -sf -u "$LAKEFS_AUTH" -X POST \
+                    "$LAKEFS_HOST/api/v1/repositories/$LAKEFS_REPO/branches/$LAKEFS_BRANCH/commits" \
+                    -H "Content-Type: application/json" \
+                    -d "{\"message\": \"Program table pipeline run $RUN_DATE\"}"
+                  echo "lakeFS commit done."
 
               volumeMounts:
                 - name: data-pvc
