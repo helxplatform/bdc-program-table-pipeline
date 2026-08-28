@@ -144,12 +144,42 @@ spec:
                   LAKEFS_AUTH="$LAKEFS_USERNAME:$LAKEFS_PASSWORD"
                   LAKEFS_API="$LAKEFS_HOST/api/v1/repositories/$LAKEFS_REPO/branches/$LAKEFS_BRANCH/objects"
 
+                  # Derive base data directory from YAML path
+                  DATA_DIR=$(dirname "$(dirname "$YAML")")
+
                   # Upload program table YAML
                   YAML_FILENAME=$(basename "$YAML")
                   curl -sf -u "$LAKEFS_AUTH" -X POST \
                     "$LAKEFS_API?path=$RUN_DATE/$YAML_FILENAME" \
                     -F "content=@$YAML"
                   echo "Uploaded: $RUN_DATE/$YAML_FILENAME"
+
+                  # Upload Jira mappings CSV
+                  JIRA_FILE="$DATA_DIR/jira_program_mappings.csv"
+                  if [[ -f "$JIRA_FILE" ]]; then
+                    curl -sf -u "$LAKEFS_AUTH" -X POST \
+                      "$LAKEFS_API?path=$RUN_DATE/jira_program_mappings.csv" \
+                      -F "content=@$JIRA_FILE"
+                    echo "Uploaded: $RUN_DATE/jira_program_mappings.csv"
+                  fi
+
+                  # Upload BDC studies JSON
+                  BDC_FILE="$DATA_DIR/studies_on_bdc_portal/bdc_studies.json"
+                  if [[ -f "$BDC_FILE" ]]; then
+                    curl -sf -u "$LAKEFS_AUTH" -X POST \
+                      "$LAKEFS_API?path=$RUN_DATE/bdc_studies.json" \
+                      -F "content=@$BDC_FILE"
+                    echo "Uploaded: $RUN_DATE/bdc_studies.json"
+                  fi
+
+                  # Upload Gen3 studies JSON
+                  GEN3_FILE="$DATA_DIR/studies_on_gen3_portal/raw_studies_on_gen3.json"
+                  if [[ -f "$GEN3_FILE" ]]; then
+                    curl -sf -u "$LAKEFS_AUTH" -X POST \
+                      "$LAKEFS_API?path=$RUN_DATE/raw_studies_on_gen3.json" \
+                      -F "content=@$GEN3_FILE"
+                    echo "Uploaded: $RUN_DATE/raw_studies_on_gen3.json"
+                  fi
 
                   # Upload run summary (flush tee buffer first)
                   echo "Run uploaded at $(date '+%Y-%m-%d %H:%M:%S UTC')" >> "$SUMMARY"
