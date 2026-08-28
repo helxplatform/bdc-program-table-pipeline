@@ -1,0 +1,40 @@
+# ServiceAccount in ykale namespace — used by the CronJob pod
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: program-table-sa
+  namespace: ykale
+---
+# Role in bdc-search-dev — grants access to update the ConfigMap and restart search-api
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: program-table-deployer
+  namespace: bdc-search-dev
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["search-api-program-study-mappings"]
+    verbs: ["get", "create", "update", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["search-api"]
+    verbs: ["get", "patch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["list", "watch"]
+---
+# RoleBinding in bdc-search-dev — binds the ykale ServiceAccount to the Role above
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: program-table-deployer-binding
+  namespace: bdc-search-dev
+subjects:
+  - kind: ServiceAccount
+    name: program-table-sa
+    namespace: ykale
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: program-table-deployer

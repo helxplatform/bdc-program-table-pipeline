@@ -1,0 +1,13 @@
+# Secrets — never commit
+jira_secrets
+*.env
+.env*
+*_secrets
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store

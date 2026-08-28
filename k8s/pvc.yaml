@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: program-table-data-pvc
+  namespace: ykale
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: basic
+  resources:
+    requests:
+      storage: 2Gi

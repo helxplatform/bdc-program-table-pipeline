@@ -1,0 +1,20 @@
+# Never include secrets or local run data in the image
+jira_secrets
+*.env
+.env*
+*_secrets
+*secret*
+
+# Local run output directories
+Aug_*/
+test_*/
+bdc-ingest-data/
+koios_data/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# k8s manifests (not needed in image)
+k8s/

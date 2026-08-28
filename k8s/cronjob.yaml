@@ -1,0 +1,113 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: program-table-pipeline
+  namespace: ykale
+spec:
+  # Runs 1st of every month at 9am UTC
+  # To trigger manually:
+  #   kubectl create job --from=cronjob/program-table-pipeline manual-$(date +%Y%m%d) -n ykale
+  schedule: "0 9 1 * *"
+  suspend: false
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          serviceAccountName: program-table-sa
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: image-pull-secret
+
+          containers:
+            - name: program-table-pipeline
+              image: containers.renci.org/helxplatform/bdc-program-table-pipeline:latest
+              imagePullPolicy: Always
+
+              resources:
+                requests:
+                  cpu: 250m
+                  memory: 256Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+
+              # All secrets injected from Kubernetes Secret — never baked into image
+              env:
+                - name: JIRA_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: program-table-secrets
+                      key: JIRA_TOKEN
+                - name: JIRA_URL
+                  value: "https://nhlbijira.nhlbi.nih.gov"
+                - name: BDC_URL
+                  value: "https://search.biodatacatalyst.renci.org/search-api"
+                - name: GEN3_URL
+                  value: "https://gen3.biodatacatalyst.nhlbi.nih.gov/"
+                - name: DEPLOY_NAMESPACE
+                  value: "bdc-search-dev"
+
+              # Run pipeline steps 0-2, then patch ConfigMap + restart search-api
+              command: ["bash", "-c"]
+              args:
+                - |
+                  set -e
+
+                  echo "=== Starting program table pipeline ==="
+                  bash run_pipeline.sh -o /data --skip-deploy
+
+                  echo ""
+                  echo "=== Finding latest program table output ==="
+                  YAML=$(ls -t /data/*/program_table/program_table_updated_*.yaml 2>/dev/null \
+                         | grep -v minified | head -1)
+                  if [[ -z "$YAML" ]]; then
+                    echo "ERROR: No program table YAML found in /data"
+                    exit 1
+                  fi
+                  echo "Using: $YAML"
+
+                  echo ""
+                  echo "=== Converting YAML to JSON for ConfigMap ==="
+                  python3 -c "
+                  import yaml, json, sys
+                  data = yaml.safe_load(open(sys.argv[1]))
+                  mappings = data['program_study_mappings']
+                  with open('/tmp/mappings.json', 'w') as f:
+                      json.dump(mappings, f, separators=(',', ':'))
+                  print(f'Entries: {len(mappings)}')
+                  " "$YAML"
+
+                  echo ""
+                  echo "=== Updating ConfigMap in $DEPLOY_NAMESPACE ==="
+                  kubectl create configmap search-api-program-study-mappings \
+                    --from-file=program_study_mappings.json=/tmp/mappings.json \
+                    -n "$DEPLOY_NAMESPACE" \
+                    --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f -
+
+                  echo ""
+                  echo "=== Restarting search-api ==="
+                  kubectl rollout restart deployment/search-api -n "$DEPLOY_NAMESPACE"
+                  kubectl rollout status deployment/search-api -n "$DEPLOY_NAMESPACE" --timeout=120s
+
+                  echo ""
+                  echo "=== Verifying ConfigMap entry count ==="
+                  kubectl get configmap search-api-program-study-mappings \
+                    -n "$DEPLOY_NAMESPACE" \
+                    -o jsonpath='{.data.program_study_mappings\.json}' | \
+                    python3 -c "import sys,json; d=json.load(sys.stdin); print(f'ConfigMap entries: {len(d)}')"
+
+                  echo ""
+                  echo "=== Pipeline complete ==="
+
+              volumeMounts:
+                - name: data-pvc
+                  mountPath: /data
+
+          volumes:
+            - name: data-pvc
+              persistentVolumeClaim:
+                claimName: program-table-data-pvc
