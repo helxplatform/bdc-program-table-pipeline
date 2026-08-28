@@ -8,7 +8,7 @@ FROM python:3.12-alpine
 COPY --from=kubectl /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl
 
 # Runtime deps for shell scripts
-RUN apk add --no-cache bash
+RUN apk add --no-cache bash curl
 
 # Install Python dependencies
 WORKDIR /app
