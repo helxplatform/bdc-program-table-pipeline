@@ -128,30 +128,27 @@ spec:
                   echo ""
                   echo "=== Fetching chart sub-chart dependencies ==="
                   mkdir -p /tmp/search-chart/charts
-                  python3 << 'PYEOF'
-import yaml, subprocess, sys, os
-
-lock_path = '/tmp/search-chart/Chart.lock'
-if not os.path.exists(lock_path):
-    print("ERROR: Chart.lock not found — cannot pin sub-chart versions", file=sys.stderr)
-    sys.exit(1)
-
-lock = yaml.safe_load(open(lock_path))
-deps = lock.get('dependencies', [])
-print(f"Chart.lock: {len(deps)} dependencies")
-for dep in deps:
-    repo, name, version = dep['repository'], dep['name'], dep['version']
-    print(f"  Pulling {name} {version} from {repo}")
-    r = subprocess.run(
-        ['helm', 'pull', '--repo', repo, name,
-         '--version', version, '--destination', '/tmp/search-chart/charts/'],
-        capture_output=True, text=True
-    )
-    if r.returncode != 0:
-        print(f"ERROR pulling {name}: {r.stderr.strip()}", file=sys.stderr)
-        sys.exit(1)
-print("All sub-charts downloaded.")
-PYEOF
+                  python3 -c "
+                  import yaml, subprocess, sys, os
+                  lock_path = '/tmp/search-chart/Chart.lock'
+                  if not os.path.exists(lock_path):
+                      print('ERROR: Chart.lock not found', file=sys.stderr)
+                      sys.exit(1)
+                  lock = yaml.safe_load(open(lock_path))
+                  deps = lock.get('dependencies', [])
+                  print(f'Chart.lock: {len(deps)} dependencies')
+                  for dep in deps:
+                      repo, name, version = dep['repository'], dep['name'], dep['version']
+                      print(f'  Pulling {name} {version} from {repo}')
+                      r = subprocess.run(
+                          ['helm', 'pull', '--repo', repo, name,
+                           '--version', version, '--destination', '/tmp/search-chart/charts/'],
+                          capture_output=True, text=True)
+                      if r.returncode != 0:
+                          print('ERROR pulling ' + name + ': ' + r.stderr.strip(), file=sys.stderr)
+                          sys.exit(1)
+                  print('All sub-charts downloaded.')
+                  "
 
                   echo ""
                   echo "=== Running helm upgrade ==="
