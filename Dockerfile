@@ -27,6 +27,7 @@ COPY bdc_utils.py \
      update_programs.py \
      deploy_mappings.py \
      diff_runs.py \
+     extract_helm_chart.py \
      run_pipeline.sh \
      ./
 

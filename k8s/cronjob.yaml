@@ -119,17 +119,11 @@ spec:
                   " "$YAML"
 
                   echo ""
-                  echo "=== Cloning search-chart ==="
-                  git clone --depth 1 https://github.com/helxplatform/search-chart.git /tmp/search-chart
-                  echo "Cloned search-chart ($(git -C /tmp/search-chart rev-parse --short HEAD))"
-
-                  echo ""
-                  echo "=== Fetching chart dependencies ==="
-                  helm repo add helx-charts https://helxplatform.github.io/helm-charts/ --force-update
-                  helm repo add airflow-stable https://airflow.apache.org --force-update
-                  helm repo add elastic https://helm.elastic.co --force-update
-                  helm repo add bitnami https://charts.bitnami.com/bitnami --force-update
-                  helm dependency build /tmp/search-chart
+                  echo "=== Extracting deployed chart from helm release secret ==="
+                  python3 /app/extract_helm_chart.py \
+                    --namespace "$DEPLOY_NAMESPACE" \
+                    --release search \
+                    --output /tmp/search-chart
 
                   echo ""
                   echo "=== Running helm upgrade ==="

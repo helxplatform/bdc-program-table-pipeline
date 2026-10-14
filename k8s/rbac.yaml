@@ -5,7 +5,9 @@ metadata:
   name: program-table-sa
   namespace: ykale
 ---
-# Role in bdc-search-dev — grants access to run helm upgrade for the search release
+# Role in bdc-search-dev — grants permissions for helm upgrade of the search release.
+# Helm needs GET on all resource types it manages (to diff before applying).
+# Only ConfigMaps/Secrets/Deployments are actually written; the rest are read-only.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -16,28 +18,48 @@ rules:
   - apiGroups: [""]
     resources: ["secrets"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # ConfigMaps managed by the search chart
+  # ConfigMaps (program table lives here)
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # Services managed by the search chart
+  # Helm needs to GET serviceaccounts to diff them (airflow creates these)
   - apiGroups: [""]
-    resources: ["services"]
+    resources: ["serviceaccounts"]
     verbs: ["get", "list", "create", "update", "patch"]
-  # PersistentVolumeClaims managed by the search chart
+  # Services, PVCs, endpoints
   - apiGroups: [""]
-    resources: ["persistentvolumeclaims"]
+    resources: ["services", "persistentvolumeclaims", "endpoints"]
     verbs: ["get", "list", "create", "update", "patch"]
-  # Deployments managed by the search chart
+  # Pods (for rollout status)
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  # Deployments, StatefulSets, ReplicaSets (airflow uses StatefulSets)
   - apiGroups: ["apps"]
-    resources: ["deployments"]
+    resources: ["deployments", "statefulsets", "replicasets", "daemonsets"]
     verbs: ["get", "list", "create", "update", "patch", "watch"]
-  # Ingresses managed by the search chart
+  # RBAC resources created by airflow subchart
+  - apiGroups: ["rbac.authorization.k8s.io"]
+    resources: ["roles", "rolebindings"]
+    verbs: ["get", "list", "create", "update", "patch"]
+  # Ingresses
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses"]
     verbs: ["get", "list", "create", "update", "patch"]
+  # PodDisruptionBudgets
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list", "create", "update", "patch"]
+  # HorizontalPodAutoscalers
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "create", "update", "patch"]
+  # ServiceMonitors (if Prometheus is installed)
+  - apiGroups: ["monitoring.coreos.com"]
+    resources: ["servicemonitors"]
+    verbs: ["get", "list", "create", "update", "patch"]
 ---
-# RoleBinding in bdc-search-dev — binds the ykale ServiceAccount to the Role above
+# RoleBinding in bdc-search-dev
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
