@@ -62,17 +62,24 @@ def write_chart(chart: dict, out_dir: str):
     """Recursively reconstruct a chart directory from the Helm release chart object."""
     os.makedirs(out_dir, exist_ok=True)
 
+    import yaml
+
     # Write Chart.yaml
     metadata = chart.get("metadata") or chart.get("Metadata") or {}
     if metadata:
-        import yaml
         with open(os.path.join(out_dir, "Chart.yaml"), "w") as f:
             yaml.dump(metadata, f, default_flow_style=False)
+
+    # Write Chart.lock — pins exact sub-chart versions so helm dependency build
+    # downloads the same versions that are already deployed, not latest.
+    lock = chart.get("lock") or chart.get("Lock") or {}
+    if lock:
+        with open(os.path.join(out_dir, "Chart.lock"), "w") as f:
+            yaml.dump(lock, f, default_flow_style=False, allow_unicode=True)
 
     # Write values.yaml
     values = chart.get("values") or chart.get("Values") or {}
     if values:
-        import yaml
         with open(os.path.join(out_dir, "values.yaml"), "w") as f:
             yaml.dump(values, f, default_flow_style=False, allow_unicode=True)
 

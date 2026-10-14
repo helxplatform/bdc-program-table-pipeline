@@ -126,6 +126,16 @@ spec:
                     --output /tmp/search-chart
 
                   echo ""
+                  echo "=== Fetching chart sub-chart dependencies ==="
+                  helm repo add helx-charts https://helxplatform.github.io/helm-charts/ 2>/dev/null || true
+                  helm repo add airflow-stable https://airflow.apache.org/ 2>/dev/null || true
+                  helm repo add elastic https://helm.elastic.co 2>/dev/null || true
+                  helm repo add bitnami https://charts.bitnami.com/bitnami 2>/dev/null || true
+                  helm repo update
+                  # Use 'build' (not 'update') so Chart.lock pins exact deployed versions
+                  helm dependency build /tmp/search-chart || helm dependency update /tmp/search-chart
+
+                  echo ""
                   echo "=== Running helm upgrade ==="
                   helm upgrade search /tmp/search-chart \
                     --reuse-values \
