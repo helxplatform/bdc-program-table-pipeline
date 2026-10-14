@@ -174,9 +174,7 @@ spec:
                   helm upgrade search /tmp/search-chart \
                     --reuse-values \
                     -f /tmp/program-table-override.yaml \
-                    -n "$DEPLOY_NAMESPACE" \
-                    --wait \
-                    --timeout 5m
+                    -n "$DEPLOY_NAMESPACE"
 
                   echo ""
                   echo "=== Verifying ConfigMap entry count ==="
