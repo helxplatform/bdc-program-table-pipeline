@@ -367,6 +367,10 @@ class JiraProgramUpdater:
                         if should_exclude:
                             self.logger.info(f"Skipping community duplicate {accession}: '{community}' (tutorial/empty)")
                             continue
+                        # Skip if this community maps to the same program already assigned to the study
+                        if validated_community_prog.lower() == study.get('Program', '').lower():
+                            self.logger.info(f"Skipping community duplicate {accession}: '{community}' (same as primary program '{study.get('Program', '')}')")
+                            continue
                         new_study = study.copy()
                         new_study['Program'] = validated_community_prog
                         # Get description for this program
