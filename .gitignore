@@ -3,6 +3,7 @@ jira_secrets
 *.env
 .env*
 *_secrets
+k8s/secret.yaml
 
 # Python
 __pycache__/
