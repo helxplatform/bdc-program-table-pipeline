@@ -12,7 +12,7 @@ COPY --from=kubectl /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl
 COPY --from=helm /usr/bin/helm /usr/local/bin/helm
 
 # Runtime deps for shell scripts + git for cloning search-chart at deploy time
-RUN apk add --no-cache bash git
+RUN apk add --no-cache bash git curl
 
 # Install Python dependencies
 WORKDIR /app
@@ -26,6 +26,7 @@ COPY bdc_utils.py \
      fetch_studies.py \
      update_programs.py \
      deploy_mappings.py \
+     diff_runs.py \
      run_pipeline.sh \
      ./
 
