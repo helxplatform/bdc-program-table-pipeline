@@ -17,19 +17,19 @@ rules:
   # Helm stores release state as secrets
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   # ConfigMaps (program table lives here)
   - apiGroups: [""]
     resources: ["configmaps"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # Helm needs to GET/WATCH serviceaccounts to diff them (airflow creates these)
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Helm needs GET/WATCH serviceaccounts to diff them (airflow creates these)
   - apiGroups: [""]
     resources: ["serviceaccounts"]
     verbs: ["get", "list", "watch", "create", "update", "patch"]
   # Services, PVCs, endpoints
   - apiGroups: [""]
     resources: ["services", "persistentvolumeclaims", "endpoints"]
-    verbs: ["get", "list", "create", "update", "patch"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # Pods (for rollout status)
   - apiGroups: [""]
     resources: ["pods"]
@@ -37,27 +37,27 @@ rules:
   # Deployments, StatefulSets, ReplicaSets (airflow uses StatefulSets)
   - apiGroups: ["apps"]
     resources: ["deployments", "statefulsets", "replicasets", "daemonsets"]
-    verbs: ["get", "list", "create", "update", "patch", "watch"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # RBAC resources created by airflow subchart
   - apiGroups: ["rbac.authorization.k8s.io"]
     resources: ["roles", "rolebindings"]
-    verbs: ["get", "list", "create", "update", "patch"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # Ingresses
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses"]
-    verbs: ["get", "list", "create", "update", "patch"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # PodDisruptionBudgets
   - apiGroups: ["policy"]
     resources: ["poddisruptionbudgets"]
-    verbs: ["get", "list", "create", "update", "patch"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # HorizontalPodAutoscalers
   - apiGroups: ["autoscaling"]
     resources: ["horizontalpodautoscalers"]
-    verbs: ["get", "list", "create", "update", "patch"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # ServiceMonitors (if Prometheus is installed)
   - apiGroups: ["monitoring.coreos.com"]
     resources: ["servicemonitors"]
-    verbs: ["get", "list", "create", "update", "patch"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
 ---
 # RoleBinding in bdc-search-dev
 apiVersion: rbac.authorization.k8s.io/v1
