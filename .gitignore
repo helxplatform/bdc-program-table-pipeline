@@ -5,6 +5,9 @@ jira_secrets
 *_secrets
 k8s/secret.yaml
 
+# Local pipeline output
+output/
+
 # Python
 __pycache__/
 *.pyc
