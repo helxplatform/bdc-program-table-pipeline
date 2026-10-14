@@ -67,7 +67,7 @@ spec:
                 - name: LAKEFS_BRANCH
                   value: "main"
 
-              # Run pipeline steps 0-2, patch ConfigMap, restart search-api, upload to lakeFS
+              # Run pipeline steps 0-2, helm upgrade search release, upload to lakeFS
               command: ["bash", "-c"]
               args:
                 - |
@@ -107,27 +107,30 @@ spec:
                   fi
 
                   echo ""
-                  echo "=== Converting YAML to JSON for ConfigMap ==="
+                  echo "=== Generating Helm values override ==="
                   python3 -c "
                   import yaml, json, sys
                   data = yaml.safe_load(open(sys.argv[1]))
                   mappings = data['program_study_mappings']
-                  with open('/tmp/mappings.json', 'w') as f:
-                      json.dump(mappings, f, separators=(',', ':'))
+                  override = {'config': {'program_study_mappings': mappings}}
+                  with open('/tmp/program-table-override.yaml', 'w') as f:
+                      yaml.dump(override, f, default_flow_style=False, allow_unicode=True)
                   print(f'Entries: {len(mappings)}')
                   " "$YAML"
 
                   echo ""
-                  echo "=== Updating ConfigMap in $DEPLOY_NAMESPACE ==="
-                  kubectl create configmap search-api-program-study-mappings \
-                    --from-file=program_study_mappings.json=/tmp/mappings.json \
-                    -n "$DEPLOY_NAMESPACE" \
-                    --dry-run=client -o yaml | kubectl apply --server-side --force-conflicts -f -
+                  echo "=== Cloning search-chart ==="
+                  git clone --depth 1 https://github.com/helxplatform/search-chart.git /tmp/search-chart
+                  echo "Cloned search-chart ($(git -C /tmp/search-chart rev-parse --short HEAD))"
 
                   echo ""
-                  echo "=== Restarting search-api ==="
-                  kubectl rollout restart deployment/search-api -n "$DEPLOY_NAMESPACE"
-                  kubectl rollout status deployment/search-api -n "$DEPLOY_NAMESPACE" --timeout=120s
+                  echo "=== Running helm upgrade ==="
+                  helm upgrade search /tmp/search-chart \
+                    --reuse-values \
+                    -f /tmp/program-table-override.yaml \
+                    -n "$DEPLOY_NAMESPACE" \
+                    --wait \
+                    --timeout 120s
 
                   echo ""
                   echo "=== Verifying ConfigMap entry count ==="

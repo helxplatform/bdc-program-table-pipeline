@@ -1,14 +1,18 @@
 # Stage 1: get kubectl from official image
 FROM bitnami/kubectl:latest AS kubectl
 
-# Stage 2: build the pipeline image
+# Stage 2: get helm from official image
+FROM alpine/helm:latest AS helm
+
+# Stage 3: build the pipeline image
 FROM python:3.12-alpine
 
-# Copy kubectl from stage 1
+# Copy kubectl and helm from earlier stages
 COPY --from=kubectl /opt/bitnami/kubectl/bin/kubectl /usr/local/bin/kubectl
+COPY --from=helm /usr/bin/helm /usr/local/bin/helm
 
-# Runtime deps for shell scripts
-RUN apk add --no-cache bash curl
+# Runtime deps for shell scripts + git for cloning search-chart at deploy time
+RUN apk add --no-cache bash git curl
 
 # Install Python dependencies
 WORKDIR /app
