@@ -22,10 +22,10 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # Helm needs to GET serviceaccounts to diff them (airflow creates these)
+  # Helm needs to GET/WATCH serviceaccounts to diff them (airflow creates these)
   - apiGroups: [""]
     resources: ["serviceaccounts"]
-    verbs: ["get", "list", "create", "update", "patch"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
   # Services, PVCs, endpoints
   - apiGroups: [""]
     resources: ["services", "persistentvolumeclaims", "endpoints"]
