@@ -176,7 +176,7 @@ spec:
                     -f /tmp/program-table-override.yaml \
                     -n "$DEPLOY_NAMESPACE" \
                     --wait \
-                    --timeout 120s
+                    --timeout 5m
 
                   echo ""
                   echo "=== Verifying ConfigMap entry count ==="
