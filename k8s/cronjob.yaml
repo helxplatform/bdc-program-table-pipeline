@@ -152,24 +152,22 @@ spec:
 
                   echo ""
                   echo "=== Aligning search-ui Deployment with helm release ==="
-                  # The search-ui Deployment was manually patched to use value: instead of
-                  # valueFrom: for REACT_APP_HELX_SEARCH_URL. helm upgrade merges them and
-                  # Kubernetes rejects the result. Pre-patch to restore the helm-managed state.
-                  SEARCH_URL_IDX=$(kubectl get deployment search-ui -n "$DEPLOY_NAMESPACE" \
-                    -o jsonpath='{.spec.template.spec.containers[0].env}' | \
-                    python3 -c "
-                    import sys,json
-                    envs=json.load(sys.stdin)
-                    idx=next((i for i,e in enumerate(envs) if e.get('name')=='REACT_APP_HELX_SEARCH_URL' and 'value' in e),-1)
-                    print(idx)" 2>/dev/null || echo -1)
-                  if [[ "$SEARCH_URL_IDX" != "-1" && -n "$SEARCH_URL_IDX" ]]; then
-                    echo "Patching env[$SEARCH_URL_IDX] REACT_APP_HELX_SEARCH_URL to use configMapKeyRef"
-                    kubectl patch deployment search-ui -n "$DEPLOY_NAMESPACE" --type=json \
-                      --patch="[{\"op\":\"replace\",\"path\":\"/spec/template/spec/containers/0/env/${SEARCH_URL_IDX}\",\"value\":{\"name\":\"REACT_APP_HELX_SEARCH_URL\",\"valueFrom\":{\"configMapKeyRef\":{\"key\":\"search_url\",\"name\":\"search-ui-config\"}}}}]"
-                    echo "Patched."
-                  else
-                    echo "search-ui already in correct state."
-                  fi
+                  python3 -c "
+                  import subprocess, json, sys
+                  ns = 'bdc-search-dev'
+                  r = subprocess.run(['kubectl','get','deployment','search-ui','-n',ns,'-o','jsonpath={.spec.template.spec.containers[0].env}'], capture_output=True, text=True)
+                  envs = json.loads(r.stdout)
+                  idx = next((i for i,e in enumerate(envs) if e.get('name')=='REACT_APP_HELX_SEARCH_URL' and 'value' in e), -1)
+                  if idx == -1:
+                      print('search-ui already in correct state.')
+                      sys.exit(0)
+                  print('Patching env[' + str(idx) + '] to remove manual value: override')
+                  new_env = {'name':'REACT_APP_HELX_SEARCH_URL','valueFrom':{'configMapKeyRef':{'key':'search_url','name':'search-ui-config'}}}
+                  patch = json.dumps([{'op':'replace','path':'/spec/template/spec/containers/0/env/'+str(idx),'value':new_env}])
+                  r = subprocess.run(['kubectl','patch','deployment','search-ui','-n',ns,'--type=json','--patch='+patch], capture_output=True, text=True)
+                  print(r.stdout.strip() or r.stderr.strip())
+                  sys.exit(r.returncode)
+                  "
 
                   echo ""
                   echo "=== Running helm upgrade ==="
