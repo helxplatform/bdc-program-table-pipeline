@@ -25,7 +25,7 @@ This pipeline maintains the BDC search portal's program-study mapping table. Whe
 ## Data Flow
 
 ```
-NHLBI Jira (BDC-DMC Joint Workspace)
+Jira (BDC-DMC Joint Workspace)
     │  Accession, Program(s), Gen3 Program Name, Community
     │
     ▼ Step 0 — fetch_jira_data.py
@@ -70,7 +70,7 @@ Each issue field is mapped as follows:
 | Jira Field | API Field ID | Output Column | Description |
 |------------|--------------|---------------|-------------|
 | Accession | `customfield_15206` | `Accession` | dbGaP accession number (e.g. `phs000007.v32.p13`) |
-| Program(s) | `customfield_15909` | `Program(s)` | NHLBI program name — primary source for program assignment |
+| Program(s) | `customfield_15909` | `Program(s)` | Program name — primary source for program assignment |
 | Gen3 Program Name | `customfield_15209` | `Gen3 Program Name` | Gen3-side program label |
 | Community | `customfield_16100` | `Community`, `Community.1`, `Community.2` | BDC community tags (multi-select, up to 3 values) |
 | Status | `status` | `Status` | Issue status |

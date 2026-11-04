@@ -2,7 +2,7 @@
 #
 # BDC Program Table Pipeline
 #
-# Fetches study data from BDC, Gen3, and NHLBI Jira, generates the program
+# Fetches study data from BDC, Gen3, and Jira, generates the program
 # table, and optionally deploys it to the Helm chart values file and cluster.
 #
 # Usage:

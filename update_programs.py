@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Update program names for studies using NHLBI Jira data for program table ingestion.
+Update program names for studies using Jira data for program table ingestion.
 
 PURPOSE:
-    Updates the program table with correct program names from NHLBI Jira,
+    Updates the program table with correct program names from Jira,
     ensuring the BDC portal's program search/filter feature has accurate data.
 
 WORKFLOW:
@@ -799,7 +799,7 @@ class JiraProgramUpdater:
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Update program names for Gen3 studies from NHLBI Jira data',
+        description='Update program names for Gen3 studies from Jira data',
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     parser.add_argument('--jira-file', required=True, help='Path to Jira data file (CSV or Excel)')

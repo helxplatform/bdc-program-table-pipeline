@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fetch program-name mapping data directly from NHLBI Jira API.
+Fetch program-name mapping data directly from the Jira API.
 
 Replaces the manual step of exporting a CSV from the BDJW Jira project.
 Queries the 'Program_name Mappings' saved filter (DATA AVAILABLE studies)
@@ -26,7 +26,7 @@ import time
 import requests
 import urllib3
 
-# NHLBI Jira server uses an expired SSL certificate — disable verification
+# The Jira server uses an expired SSL certificate — disable verification
 # for all connections to this known internal host.
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -43,7 +43,7 @@ DEFAULT_JQL = (
 # Jira custom field IDs → CSV column names
 FIELD_MAP = {
     "customfield_15206": "Accession",       # dbGaP accession
-    "customfield_15909": "Program(s)",      # NHLBI program name (single select)
+    "customfield_15909": "Program(s)",      # program name (single select)
     "customfield_15209": "Gen3 Program Name",  # Gen3 program (text)
     "customfield_16100": "Community",       # BDC community (multi-select list)
     "status":            "Status",          # Issue status
@@ -76,13 +76,13 @@ CSV_COLUMNS = [
 
 def get_session(jira_url: str, token: str) -> requests.Session:
     session = requests.Session()
-    session.verify = False  # NHLBI Jira SSL cert is expired
+    session.verify = False  # Jira SSL cert is expired
     session.headers.update({
         "Authorization": f"Bearer {token}",
         "Accept": "application/json",
         "Content-Type": "application/json",
     })
-    print("WARNING: SSL verification disabled — NHLBI Jira certificate has expired.")
+    print("WARNING: SSL verification disabled — Jira server certificate has expired.")
     # Validate connection
     resp = session.get(f"{jira_url}/rest/api/2/myself", timeout=30)
     resp.raise_for_status()
