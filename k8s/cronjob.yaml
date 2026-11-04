@@ -179,7 +179,7 @@ spec:
                   echo "=== Running helm upgrade ==="
                   helm upgrade search /tmp/search-chart \
                     --reuse-values \
-                    --timeout 30m \
+                    --no-hooks \
                     -f /tmp/program-table-override.yaml \
                     -n "$DEPLOY_NAMESPACE"
 
