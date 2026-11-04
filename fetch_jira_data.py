@@ -24,6 +24,11 @@ import os
 import sys
 import time
 import requests
+import urllib3
+
+# NHLBI Jira server uses an expired SSL certificate — disable verification
+# for all connections to this known internal host.
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 JIRA_URL_DEFAULT = "https://nhlbijira.nhlbi.nih.gov"
@@ -71,11 +76,13 @@ CSV_COLUMNS = [
 
 def get_session(jira_url: str, token: str) -> requests.Session:
     session = requests.Session()
+    session.verify = False  # NHLBI Jira SSL cert is expired
     session.headers.update({
         "Authorization": f"Bearer {token}",
         "Accept": "application/json",
         "Content-Type": "application/json",
     })
+    print("WARNING: SSL verification disabled — NHLBI Jira certificate has expired.")
     # Validate connection
     resp = session.get(f"{jira_url}/rest/api/2/myself", timeout=30)
     resp.raise_for_status()
