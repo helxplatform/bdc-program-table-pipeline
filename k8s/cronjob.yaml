@@ -156,6 +156,12 @@ spec:
                   import subprocess, json, sys
                   ns = 'bdc-search-dev'
                   r = subprocess.run(['kubectl','get','deployment','search-ui','-n',ns,'-o','jsonpath={.spec.template.spec.containers[0].env}'], capture_output=True, text=True)
+                  if r.returncode != 0:
+                      print('kubectl get search-ui failed (skipping pre-patch): ' + r.stderr.strip())
+                      sys.exit(0)
+                  if not r.stdout.strip():
+                      print('search-ui env is empty or unset — skipping pre-patch.')
+                      sys.exit(0)
                   envs = json.loads(r.stdout)
                   idx = next((i for i,e in enumerate(envs) if e.get('name')=='REACT_APP_HELX_SEARCH_URL' and 'value' in e), -1)
                   if idx == -1:
