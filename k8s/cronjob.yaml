@@ -119,36 +119,29 @@ spec:
                   " "$YAML"
 
                   echo ""
-                  echo "=== Extracting deployed chart from helm release secret ==="
-                  python3 /app/extract_helm_chart.py \
-                    --namespace "$DEPLOY_NAMESPACE" \
-                    --release search \
-                    --output /tmp/search-chart
+                  echo "=== Updating helm repo ==="
+                  helm repo add helx-charts https://helxplatform.github.io/helm-charts/ 2>/dev/null || true
+                  helm repo update helx-charts
 
                   echo ""
-                  echo "=== Fetching chart sub-chart dependencies ==="
-                  mkdir -p /tmp/search-chart/charts
-                  python3 -c "
-                  import yaml, subprocess, sys, os
-                  lock_path = '/tmp/search-chart/Chart.lock'
-                  if not os.path.exists(lock_path):
-                      print('ERROR: Chart.lock not found', file=sys.stderr)
-                      sys.exit(1)
-                  lock = yaml.safe_load(open(lock_path))
-                  deps = lock.get('dependencies', [])
-                  print(f'Chart.lock: {len(deps)} dependencies')
-                  for dep in deps:
-                      repo, name, version = dep['repository'], dep['name'], dep['version']
-                      print(f'  Pulling {name} {version} from {repo}')
-                      r = subprocess.run(
-                          ['helm', 'pull', '--repo', repo, name,
-                           '--version', version, '--destination', '/tmp/search-chart/charts/'],
-                          capture_output=True, text=True)
-                      if r.returncode != 0:
-                          print('ERROR pulling ' + name + ': ' + r.stderr.strip(), file=sys.stderr)
-                          sys.exit(1)
-                  print('All sub-charts downloaded.')
-                  "
+                  echo "=== Checking chart version alignment ==="
+                  DEPLOYED_VERSION=$(helm list -n "$DEPLOY_NAMESPACE" --filter '^search$' -o json \
+                    | python3 -c "import sys,json; r=json.load(sys.stdin); print(r[0]['chart'].replace('search-',''))")
+                  echo "Deployed: search-$DEPLOYED_VERSION"
+                  REPO_VERSION=$(helm search repo helx-charts/search --version "$DEPLOYED_VERSION" -o json \
+                    | python3 -c "import sys,json; r=json.load(sys.stdin); print(r[0]['version'] if r else '')" 2>/dev/null || echo "")
+                  if [[ -z "$REPO_VERSION" ]]; then
+                    echo "WARNING: search-$DEPLOYED_VERSION not found in repo — using latest available"
+                    VERSION_FLAG=""
+                  else
+                    echo "Repo has search-$DEPLOYED_VERSION — aligned"
+                    VERSION_FLAG="--version $DEPLOYED_VERSION"
+                  fi
+
+                  echo ""
+                  echo "=== Getting current helm values from cluster ==="
+                  helm get values search -n "$DEPLOY_NAMESPACE" > /tmp/search-values.yaml
+                  echo "Values retrieved."
 
                   echo ""
                   echo "=== Aligning search-ui Deployment with helm release ==="
@@ -177,9 +170,10 @@ spec:
 
                   echo ""
                   echo "=== Running helm upgrade ==="
-                  helm upgrade search /tmp/search-chart \
-                    --reuse-values \
+                  helm upgrade search helx-charts/search \
+                    $VERSION_FLAG \
                     --no-hooks \
+                    -f /tmp/search-values.yaml \
                     -f /tmp/program-table-override.yaml \
                     -n "$DEPLOY_NAMESPACE"
 
